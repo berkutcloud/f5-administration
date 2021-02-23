@@ -1,0 +1,35 @@
+---
+- name: BIG-IP SETUP
+  hosts: ltm01
+  connection: local
+  gather_facts: false
+  vars_files: web_app.yml
+
+  tasks:
+    - name: Setting up provider values
+      set_fact:
+       provider:
+        server: "{{ansible_host}}"
+        server_port: "443"
+        validate_certs: "False"
+  
+    - name: Create New LB Pool
+      bigip_pool:
+        name: "POOL_{{ website }}_{{ vip_port }}"
+        lb_method: round-robin
+        monitors:
+          - http
+        state: present
+        provider: "{{ provider }}"
+
+    - name: ADD POOL MEMBERS
+      bigip_pool_member:
+        pool: "POOL_{{ website }}_{{ vip_port }}"
+        host: "{{ item.ip }}"
+        name: "{{ item.name }}"
+        port: "{{ item.port }}"
+        description: "Web Server for {{ website }}"
+        provider: "{{ provider }}"
+      loop: "{{ pool_members }}"
+      tags: new_pool
+
